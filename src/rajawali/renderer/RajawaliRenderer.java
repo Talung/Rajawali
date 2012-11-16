@@ -7,7 +7,7 @@ import java.util.TimerTask;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import net.rbgrn.opengl.GLWallpaperService.GLEngine;
+import net.rbgrn.android.glwallpaperservice.GLWallpaperService.GLEngine;
 import rajawali.BaseObject3D;
 import rajawali.Camera;
 import rajawali.animation.TimerManager;
