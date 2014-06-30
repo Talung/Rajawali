@@ -1,31 +1,66 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali.bounds;
 
 import java.nio.FloatBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import rajawali.BaseObject3D;
 import rajawali.Camera;
 import rajawali.Geometry3D;
-import rajawali.materials.SimpleMaterial;
-import rajawali.math.Number3D;
+import rajawali.Object3D;
+import rajawali.materials.Material;
+import rajawali.math.Matrix4;
+import rajawali.math.vector.Vector3;
 import rajawali.primitives.Cube;
 import android.opengl.GLES20;
-import android.opengl.Matrix;
 
 public class BoundingBox implements IBoundingVolume {
 	protected Geometry3D mGeometry;
-	protected Number3D mMin, mTransformedMin;
-	protected Number3D mMax, mTransformedMax;
-	protected Number3D mTmpMin, mTmpMax;
-	protected Number3D[] mPoints;
-	protected Number3D[] mTmp;
+	protected final Vector3 mMin, mTransformedMin;
+	protected final Vector3 mMax, mTransformedMax;
+	protected final Vector3 mTmpMin, mTmpMax;
+	protected final Vector3[] mPoints;
+	protected final Vector3[] mTmp;
 	protected int mI;
 	protected Cube mVisualBox;
-	protected float[] mTmpMatrix = new float[16];
+	protected final Matrix4 mTmpMatrix = new Matrix4(); //Assumed to never leave identity state
+	protected AtomicInteger mBoundingColor = new AtomicInteger(0xffffff00);
 	
-	public void copyPoints(Number3D[] pts){
+	public BoundingBox() {
+		mTransformedMin = new Vector3();
+		mTransformedMax = new Vector3();
+		mTmpMin = new Vector3();
+		mTmpMax = new Vector3();
+		mPoints = new Vector3[8];
+		mTmp = new Vector3[8];
+		mMin = new Vector3();
+		mMax = new Vector3();
+		for(int i=0; i<8; ++i) {
+			mPoints[i] = new Vector3();
+			mTmp[i] = new Vector3();
+		}
+	}
+	
+	public BoundingBox(Geometry3D geometry) {
+		this();
+		mGeometry = geometry;
+		calculateBounds(mGeometry);
+	}
+	
+	public void copyPoints(Vector3[] pts){
 		
-		Number3D min = mTransformedMin;
-		Number3D max = mTransformedMax;
+		Vector3 min = mTransformedMin;
+		Vector3 max = mTransformedMax;
 		// -- bottom plane
 		// -- -x, -y, -z
 		pts[0].setAll(min.x, min.y, min.z);
@@ -46,30 +81,16 @@ public class BoundingBox implements IBoundingVolume {
 		// --  x,  y, -z
 		pts[7].setAll(max.x, max.y, min.z);
 	}
-	
-	public BoundingBox() {
-		super();
-		mTransformedMin = new Number3D();
-		mTransformedMax = new Number3D();
-		mTmpMin = new Number3D();
-		mTmpMax = new Number3D();
-		mPoints = new Number3D[8];
-		mTmp = new Number3D[8];
-		mMin = new Number3D();
-		mMax = new Number3D();
-		for(int i=0; i<8; ++i) {
-			mPoints[i] = new Number3D();
-			mTmp[i] = new Number3D();
-		}
-	}
-	
-	public void drawBoundingVolume(Camera camera, float[] projMatrix, float[] vMatrix, float[] mMatrix) {
-		if(mVisualBox == null) {
+
+	public void drawBoundingVolume(Camera camera, final Matrix4 vpMatrix, final Matrix4 projMatrix, 
+			final Matrix4 vMatrix, final Matrix4 mMatrix) {
+		if (mVisualBox == null) {
 			mVisualBox = new Cube(1);
-			mVisualBox.setMaterial(new SimpleMaterial());
-			mVisualBox.getMaterial().setUseColor(true);
-			mVisualBox.setColor(0xffffff00);
+			Material material = new Material();
+			mVisualBox.setMaterial(material);
+			mVisualBox.setColor(mBoundingColor.get());
 			mVisualBox.setDrawingMode(GLES20.GL_LINE_LOOP);
+			mVisualBox.setDoubleSided(true);
 		}
 		
 		mVisualBox.setScale(
@@ -77,35 +98,40 @@ public class BoundingBox implements IBoundingVolume {
 				Math.abs(mTransformedMax.y - mTransformedMin.y),
 				Math.abs(mTransformedMax.z - mTransformedMin.z)
 				);
-		Matrix.setIdentityM(mTmpMatrix, 0);
 		mVisualBox.setPosition(
-				mTransformedMin.x + (mTransformedMax.x - mTransformedMin.x) * .5f, 
-				mTransformedMin.y + (mTransformedMax.y - mTransformedMin.y) * .5f, 
-				mTransformedMin.z + (mTransformedMax.z - mTransformedMin.z) * .5f
+				mTransformedMin.x + (mTransformedMax.x - mTransformedMin.x) * .5, 
+				mTransformedMin.y + (mTransformedMax.y - mTransformedMin.y) * .5, 
+				mTransformedMin.z + (mTransformedMax.z - mTransformedMin.z) * .5
 				);
-		mVisualBox.render(camera, projMatrix, vMatrix, mTmpMatrix, null);
+		
+		mVisualBox.render(camera, vpMatrix, projMatrix, vMatrix, mTmpMatrix, null);
 	}
 	
-	public BoundingBox(Geometry3D geometry) {
-		this();
-		mGeometry = geometry;
-		calculateBounds(mGeometry);
-	}
-	
-	public BaseObject3D getVisual() {
+	public Object3D getVisual() {
 		return mVisualBox;
+	}
+	
+	public void setBoundingColor(int color) {
+		mBoundingColor.set(color);
+		if (mVisualBox != null) {
+			mVisualBox.setColor(color);
+		}
+	}
+	
+	public int getBoundingColor() {
+		return mBoundingColor.get();
 	}
 	
 	public void calculateBounds(Geometry3D geometry) {
 		FloatBuffer vertices = geometry.getVertices();
 		vertices.rewind();
 		
-		mMin = new Number3D(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE);
-		mMax = new Number3D(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE);
+		mMin.setAll(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+		mMax.setAll(-Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE);
 		
-		Number3D vertex = new Number3D();
+		Vector3 vertex = new Vector3();
 		
-		while(vertices.hasRemaining()) {
+		while (vertices.hasRemaining()) {
 			vertex.x = vertices.get();
 			vertex.y = vertices.get();
 			vertex.z = vertices.get();
@@ -117,7 +143,10 @@ public class BoundingBox implements IBoundingVolume {
 			if(vertex.y > mMax.y) mMax.y = vertex.y;
 			if(vertex.z > mMax.z) mMax.z = vertex.z;
 		}
-		
+		calculatePoints();
+	}
+	
+	public void calculatePoints() {
 		// -- bottom plane
 		// -- -x, -y, -z
 		mPoints[0].setAll(mMin.x, mMin.y, mMin.z);
@@ -127,7 +156,7 @@ public class BoundingBox implements IBoundingVolume {
 		mPoints[2].setAll(mMax.x, mMin.y, mMax.z);
 		// --  x, -y, -z
 		mPoints[3].setAll(mMax.x, mMin.y, mMin.z);
-		
+
 		// -- top plane
 		// -- -x,  y, -z
 		mPoints[4].setAll(mMin.x, mMax.y, mMin.z);
@@ -139,16 +168,15 @@ public class BoundingBox implements IBoundingVolume {
 		mPoints[7].setAll(mMax.x, mMax.y, mMin.z);
 	}
 	
-	public void transform(final float[] matrix) {
-		mTransformedMin.setAll(Float.MAX_VALUE, Float.MAX_VALUE, Float.MAX_VALUE);
-		mTransformedMax.setAll(-Float.MAX_VALUE, -Float.MAX_VALUE, -Float.MAX_VALUE);
+	public void transform(final Matrix4 matrix) {
+		mTransformedMin.setAll(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+		mTransformedMax.setAll(-Double.MAX_VALUE, -Double.MAX_VALUE, -Double.MAX_VALUE);
 		
 		for(mI=0; mI<8; ++mI) {
-			Number3D o = mPoints[mI];
-			Number3D d = mTmp[mI];
-			d.setAllFrom(o);
+			Vector3 o = mPoints[mI];
+			Vector3 d = mTmp[mI];
+			d.setAll(o);
 			d.multiply(matrix);
-			d.x = -d.x;
 			
 			if(d.x < mTransformedMin.x) mTransformedMin.x = d.x;
 			if(d.y < mTransformedMin.y) mTransformedMin.y = d.y;
@@ -159,31 +187,53 @@ public class BoundingBox implements IBoundingVolume {
 		}
 	}
 	
-	public Number3D getMin() {
+	public Vector3 getMin() {
 		return mMin;
 	}
 	
-	public void setMin(Number3D min) {
-		mMin.setAllFrom(min);
+	public void setMin(Vector3 min) {
+		mMin.setAll(min);
 	}
 	
-	public Number3D getMax() {
+	public Vector3 getMax() {
 		return mMax;
 	}
 	
-	public void setMax(Number3D max) {
-		mMax.setAllFrom(max);
+	public void setMax(Vector3 max) {
+		mMax.setAll(max);
 	}
 
-	public Number3D getTransformedMin() {
+	public Vector3 getTransformedMin() {
 		return mTransformedMin;
 	}
 	
-	public Number3D getTransformedMax() {
+	public Vector3 getTransformedMax() {
 		return mTransformedMax;
 	}
 	
 	public boolean intersectsWith(IBoundingVolume boundingVolume) {
+		if(!(boundingVolume instanceof BoundingBox)) return false;
+		BoundingBox boundingBox = (BoundingBox)boundingVolume;
+		Vector3 otherMin = boundingBox.getTransformedMin();
+		Vector3 otherMax = boundingBox.getTransformedMax();
+		Vector3 min = mTransformedMin;
+		Vector3 max = mTransformedMax;		
+		
+		return (min.x < otherMax.x) && (max.x > otherMin.x) &&
+				(min.y < otherMax.y) && (max.y > otherMin.y) &&
+				(min.z < otherMax.z) && (max.z > otherMin.z);
+	}
+	
+	@Override
+	public String toString() {
+		return "BoundingBox min: " + mTransformedMin + " max: " + mTransformedMax;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see rajawali.bounds.IBoundingVolume#contains(rajawali.bounds.IBoundingVolume)
+	 */
+	/*public boolean contains(IBoundingVolume boundingVolume) {
 		if(!(boundingVolume instanceof BoundingBox)) return false;
 		BoundingBox boundingBox = (BoundingBox)boundingVolume;
 		Number3D otherMin = boundingBox.getTransformedMin();
@@ -191,12 +241,25 @@ public class BoundingBox implements IBoundingVolume {
 		Number3D min = mTransformedMin;
 		Number3D max = mTransformedMax;		
 		
-		return (min.x < otherMax.x) && (max.x > otherMin.x) &&
-				(min.y < otherMax.y) && (max.y > otherMin.y) &&
-				(min.z < otherMax.z) && (max.z > otherMin.z);
+		return (max.x >= otherMax.x) && (min.x <= otherMin.x) &&
+				(max.y >= otherMax.y) && (min.y <= otherMin.y) &&
+				(max.z >= otherMax.z) && (min.z <= otherMin.z);
 	}
-	
-	public String toString() {
-		return "BoundingBox min: " + mTransformedMin + " max: " + mTransformedMax;
-	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see rajawali.bounds.IBoundingVolume#isContainedBy(rajawali.bounds.IBoundingVolume)
+	 */
+	/*public boolean isContainedBy(IBoundingVolume boundingVolume) {
+		if(!(boundingVolume instanceof BoundingBox)) return false;
+		BoundingBox boundingBox = (BoundingBox)boundingVolume;
+		Number3D otherMin = boundingBox.getTransformedMin();
+		Number3D otherMax = boundingBox.getTransformedMax();
+		Number3D min = mTransformedMin;
+		Number3D max = mTransformedMax;		
+		
+		return (max.x <= otherMax.x) && (min.x >= otherMin.x) &&
+				(max.y <= otherMax.y) && (min.y >= otherMin.y) &&
+				(max.z <= otherMax.z) && (min.z >= otherMin.z);
+	}*/
 }

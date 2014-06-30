@@ -1,53 +1,39 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali.wallpaper;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.egl.EGLContext;
 import javax.microedition.khronos.egl.EGLDisplay;
 
-import net.rbgrn.opengl.GLWallpaperService;
 import rajawali.renderer.RajawaliRenderer;
 import rajawali.util.RajLog;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
+import android.service.wallpaper.WallpaperService;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 
-public class Wallpaper extends GLWallpaperService {
+public abstract class Wallpaper extends WallpaperService {
 
 	public static String TAG = "Rajawali";
 	private static final boolean DEBUG = false;
 	private static boolean mUsesCoverageAa;
 	public static final String SHARED_PREFS_NAME = "rajawalisharedprefs";
-
-	private static class ContextFactory implements GLSurfaceView.EGLContextFactory {
-
-		private static int EGL_CONTEXT_CLIENT_VERSION = 0x3098;
-
-		public EGLContext createContext(EGL10 egl, EGLDisplay display, EGLConfig eglConfig) {
-			Log.d(TAG, "Creating OpenGL ES 2.0 context");
-			checkEglError("Before eglCreateContext", egl);
-			int[] attrib_list = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL10.EGL_NONE };
-			EGLContext context = egl.eglCreateContext(display, eglConfig, EGL10.EGL_NO_CONTEXT, attrib_list);
-			checkEglError("After eglCreateContext", egl);
-
-			return context;
-		}
-
-		public void destroyContext(EGL10 egl, EGLDisplay display, EGLContext context) {
-			egl.eglDestroyContext(display, context);
-		}
-	}
-
-	private static void checkEglError(String prompt, EGL10 egl) {
-		int error;
-		while ((error = egl.eglGetError()) != EGL10.EGL_SUCCESS) {
-			Log.e(TAG, String.format("%s: EGL error: 0x%x", prompt, error));
-		}
-	}
 
 	private static class ConfigChooser implements GLSurfaceView.EGLConfigChooser {
 
@@ -280,78 +266,114 @@ public class Wallpaper extends GLWallpaperService {
 		private int[] mValue = new int[1];
 	}
 
-	protected class WallpaperEngine extends GLEngine {
+	protected class WallpaperEngine extends Engine {
 
-		private RajawaliRenderer renderer;
+		protected class GLWallpaperSurfaceView extends GLSurfaceView {
 
-		public WallpaperEngine(SharedPreferences preferences, Context context, RajawaliRenderer renderer)
-		{
+			GLWallpaperSurfaceView(Context context) {
+				super(context);
+			}
+
+			@Override
+			public SurfaceHolder getHolder() {
+				return getSurfaceHolder();
+			}
+
+			public void onDestroy() {
+				super.onDetachedFromWindow();
+			}
+		}
+
+		protected Context mContext;
+		protected RajawaliRenderer mRenderer;
+		protected GLWallpaperSurfaceView mSurfaceView;
+		protected boolean mMultisampling;
+		protected float mDefaultPreviewOffsetX;
+
+		public WallpaperEngine(SharedPreferences preferences, Context context, RajawaliRenderer renderer) {
 			this(preferences, context, renderer, false);
 		}
 
 		public WallpaperEngine(SharedPreferences preferences, Context context, RajawaliRenderer renderer,
 				boolean useMultisampling) {
-			super();
-
-			setEGLContextFactory(new ContextFactory());
-			setEGLConfigChooser(new ConfigChooser(5, 6, 5, 0, 16, 0, useMultisampling));
-			// setEGLConfigChooser(new ConfigChooser(8, 8, 8, 8, 16, 0));
-
-			renderer.setEngine(this);
-			renderer.setUsesCoverageAa(mUsesCoverageAa);
-			renderer.setSharedPreferences(preferences);
-			setRenderer(renderer);
-			setRenderMode(RENDERMODE_WHEN_DIRTY);
-
-			this.renderer = renderer;
+			mContext = context;
+			mRenderer = renderer;
+			mRenderer.setSharedPreferences(preferences);
+			mRenderer.setEngine(this);
+			mMultisampling = useMultisampling;
+			mDefaultPreviewOffsetX = 0.5f;
 		}
 
 		@Override
 		public void onOffsetsChanged(float xOffset, float yOffset, float xOffsetStep, float yOffsetStep,
 				int xPixelOffset, int yPixelOffset) {
-			if (renderer != null)
-				renderer.onOffsetsChanged(xOffset, yOffset, xOffsetStep, yOffsetStep, xPixelOffset, yPixelOffset);
+			super.onOffsetsChanged(xOffset, yOffset, xOffsetStep, yOffsetStep, xPixelOffset, yPixelOffset);
+			if (mRenderer != null) {
+				if (isPreview() && enableDefaultXOffsetInPreview())
+					xOffset = mDefaultPreviewOffsetX;
+					
+				mRenderer.onOffsetsChanged(xOffset, yOffset, xOffsetStep, yOffsetStep, xPixelOffset, yPixelOffset);
+			}
+		}
+		
+		public boolean enableDefaultXOffsetInPreview() {
+			return true;
 		}
 
 		@Override
 		public void onTouchEvent(MotionEvent event) {
-			if (renderer != null)
-				renderer.onTouchEvent(event);
+			super.onTouchEvent(event);
+			if (mRenderer != null)
+				mRenderer.onTouchEvent(event);
 		}
 
 		@Override
+		@TargetApi(15)
 		public void setOffsetNotificationsEnabled(boolean enabled) {
-			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1)
+			if (Build.VERSION.SDK_INT >= 15) {
 				super.setOffsetNotificationsEnabled(enabled);
+			}
 		}
 
 		@Override
-		public void onCreate(SurfaceHolder surfaceHolder)
-		{
-			super.onCreate(surfaceHolder);
+		public void onCreate(SurfaceHolder holder) {
+			super.onCreate(holder);
+			mSurfaceView = new GLWallpaperSurfaceView(mContext);
+			mSurfaceView.setEGLContextClientVersion(2);
+			mSurfaceView.setEGLConfigChooser(new ConfigChooser(5, 6, 5, 0, 16, 0, mMultisampling));
+			mSurfaceView.setRenderer(mRenderer);
+			mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+
+			mRenderer.setUsesCoverageAa(mUsesCoverageAa);
+			mRenderer.setSurfaceView(mSurfaceView);
+
 			setTouchEventsEnabled(true);
+		}
+
+		@Override
+		public void onSurfaceDestroyed(SurfaceHolder holder) {
+			super.onSurfaceDestroyed(holder);
 		}
 
 		@Override
 		public void onDestroy() {
 			setTouchEventsEnabled(false);
+			mRenderer.onSurfaceDestroyed();
+			mRenderer = null;
 			super.onDestroy();
-			renderer.onSurfaceDestroyed();
-			renderer = null;
 		}
 
 		@Override
 		public void onVisibilityChanged(boolean visible) {
 			super.onVisibilityChanged(visible);
-			renderer.onVisibilityChanged(visible);
+			if (mRenderer != null) {
+				mRenderer.onVisibilityChanged(visible);
+				if (visible) {
+					mSurfaceView.onResume();
+				} else {
+					mSurfaceView.onPause();
+				}				
+			}
 		}
 	}
-
-	@Override
-	public Engine onCreateEngine() {
-		return null;
-	}
-
-	@Override
-	public void onDestroy() {}
 }

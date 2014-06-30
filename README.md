@@ -1,10 +1,20 @@
-# Rajawali
+![Rajawali](http://www.rozengain.com/files/rajawali-logo.jpg)
 
-[![Sample Live Screensavers](http://www.rozengain.com/files/rajawali/rajawali-3d-can-jet.jpg)](http://www.rozengain.com/blog/2011/08/23/announcing-rajawali-an-opengl-es-2-0-based-3d-framework-for-android/)
-[![Sample Game](http://www.rozengain.com/files/spotlights/rajawali-game.jpg)](http://www.rozengain.com/blog/2011/08/23/announcing-rajawali-an-opengl-es-2-0-based-3d-framework-for-android/)
-Rajawali is a 3D engine for Android based on OpenGL ES 2.0. It can be used for normal apps as well as live wallpapers.
+Rajawali is a 3D engine for Android based on OpenGL ES 2.0/3.0. It can be used for normal apps as well as live wallpapers.
 
-[Announcing Rajawali: An OpenGL ES 2.0 Based 3D Framework For Android](http://www.rozengain.com/blog/2011/08/23/announcing-rajawali-an-opengl-es-2-0-based-3d-framework-for-android/)
+Want to keep the developers going? Buy them a beer! (http://www.pledgie.com/campaigns/21807)
+
+[Join the Rajawali Community](https://plus.google.com/u/0/communities/116529974266844528013) on [![Rajawali Community on Google Plus](http://sinceresocial.com/wp-content/uploads/2012/05/google+-20px.png)](https://plus.google.com/u/0/communities/116529974266844528013) to stay up-to-date on the latest news. 
+
+_NOTE: Rajawali recently removed official support for versions of Android below 4.0/API 14. If you need support for these devices you will need to use the [`v0.9`](https://github.com/MasDennis/Rajawali/tree/v0.9) tag. This decision was made in order to allow us to freely improve the library in the face of the growing uptake of 4.0+ devices. Major bugs identified in this tag will be addressed, but no further improvements/enhancements should be expected._
+
+_NOTE: Rajawali's release process is changing and the master branch should be considered unstable. Use the [`v0.9`](https://github.com/MasDennis/Rajawali/tree/v0.9) tag if you need a stable version. We are working to improve documentation on this subject._
+
+The [RajawaliExamples](https://github.com/MasDennis/RajawaliExamples) project is an ever growing toolkit for developing 3D content. [Check it out!](https://github.com/MasDennis/RajawaliExamples)
+
+## Made With Rajawali
+
+Numerous apps and live wallpapers have been made with Rajawali. [Check them out!](https://plus.google.com/u/0/communities/116529974266844528013/stream/526227da-cf2d-46f9-8ad6-beaca7b8ddd5)
 
 ## Using Rajawali
 
@@ -16,58 +26,56 @@ Rajawali is a 3D engine for Android based on OpenGL ES 2.0. It can be used for n
 
 [Download the free app](https://market.android.com/details?id=com.monyetmabuk.rajawali.tutorials)
 
+## Rajawali + Augmented Reality
+
+[RajawaliVuforia GitHub](https://github.com/MasDennis/RajawaliVuforia)
+
+[YouTube Video of RajawaliVuforia in action](http://www.youtube.com/watch?v=rjLa4K9Ffuo)
+
 ## Tutorials
 
-* [Rajawali Tutorial 1: Basic Setup & a Sphere](http://www.rozengain.com/blog/2011/08/24/rajawali-tutorial-1-basic-setup-a-sphere/)
-* [Rajawali Tutorial 2: Creating a live wallpaper and importing a model](http://www.rozengain.com/blog/2011/08/25/rajawali-tutorial-2-creating-a-live-wallpaper-and-importing-a-model/)
-* [Rajawali Tutorial 3: Materials](http://www.rozengain.com/blog/2011/12/05/rajawali-tutorial-3-materials/)
-* [Rajawali Tutorial 4: Optimisation](http://www.rozengain.com/blog/2012/01/16/rajawali-tutorial-4-optimisation/)
-* [Rajawali Tutorial 5: Skybox](http://www.rozengain.com/blog/2012/02/15/rajawali-tutorial-5-skybox/)
-* [Rajawali Tutorial 6: Adding User Interface Elements](http://www.rozengain.com/blog/2012/02/17/rajawali-tutorial-6-adding-user-interface-elements/)
-* [Rajawali Tutorial 7: Creating a Custom Material / GLSL Shader](http://www.rozengain.com/blog/2012/02/22/rajawali-tutorial-7-creating-a-custom-material-glsl-shader/)
-* [Rajawali Tutorial 8: More About The Initialization Phase & Lost Textures](http://www.rozengain.com/blog/2012/02/22/rajawali-tutorial-8-more-about-the-initialization-phase-lost-textures/)
-* [Rajawali Tutorial 9: Rajawali Tutorial 9: 2D Renderer](http://www.rozengain.com/blog/2012/02/22/rajawali-tutorial-9-2d-renderer/)
-* [Rajawali Tutorial 10: Simple Particle System](http://www.rozengain.com/blog/2012/02/23/rajawali-tutorial-10-simple-particle-system/)
-* [Rajawali Tutorial 11: A Better, Faster Particle System](http://www.rozengain.com/blog/2012/02/27/rajawali-tutorial-11-a-better-faster-particle-system/)
-* [Rajawali Tutorial 12: Object Picking](http://www.rozengain.com/blog/2012/03/23/rajawali-tutorial-12-object-picking/)
-* [Rajawali Tutorial 13: Animation classes](http://www.rozengain.com/blog/2012/03/26/rajawali-tutorial-12-animation-classes/)
-* [Rajawali Tutorial 14: Bump/Normal Mapping](http://www.rozengain.com/blog/2012/03/26/rajawali-tutorial-13-bumpnormal-mapping/)
-* [Rajawali Tutorial 15: MD2 Animation](http://www.rozengain.com/blog/2012/04/04/rajawali-tutorial-15-md2-animation/)
-* [Rajawali Tutorial 16: Collision Detection](http://www.rozengain.com/blog/2012/04/13/rajawali-tutorial-16-collision-detection/)
-* [Rajawali Tutorial 17: Importing .Obj Files](http://www.rozengain.com/blog/2012/04/13/rajawali-tutorial-17-importing-obj-files/)
-* [Rajawali Tutorial 18: Drawing Lines](http://www.rozengain.com/blog/2012/04/26/rajawali-tutorial-18-drawing-lines/)
-* [Rajawali Tutorial 19: Catmull-Rom Splines](http://www.rozengain.com/blog/2012/04/26/rajawali-tutorial-19-catmull-rom-splines/)
-* [Rajawali Tutorial 20: Animated Sprites](http://www.rozengain.com/blog/2012/04/26/rajawali-tutorial-20-animated-sprites/)
-* [Rajawali Tutorial 21: Fog](http://www.rozengain.com/blog/2012/05/02/rajawali-tutorial-21-fog/)
-* [Rajawali Tutorial 22: More Optimisation](http://www.rozengain.com/blog/2012/05/03/rajawali-tutorial-22-more-optimisation/)
-* [Rajawali Tutorial 23: Custom Vertex Shader](http://www.rozengain.com/blog/2012/05/16/rajawali-tutorial-23-custom-vertex-shader/)
-* [Rajawali Tutorial 24: Using Geometry Data To Position And Rotate Objects](http://www.rozengain.com/blog/2012/05/30/rajawali-tutorial-24-using-geometry-data-to-position-and-rotate-objects/)
-* [Rajawali Tutorial 25: Video Material](http://www.rozengain.com/blog/2012/08/08/rajawali-tutorial-25-video-material/)
+1. [Basic Setup & a Sphere](https://github.com/MasDennis/Rajawali/wiki/Tutorial-01----Basic-Setup-&-a-Sphere)  
+2. [Creating a Live Wallpaper and Importing a Model](https://github.com/MasDennis/Rajawali/wiki/Tutorial-02-Creating-a-Live-Wallpaper-and-Importing-a-Model)  
+3. [Materials](https://github.com/MasDennis/Rajawali/wiki/Tutorial-03-Materials)  
+4. [Optimization](https://github.com/MasDennis/Rajawali/wiki/Tutorial-04-Optimization)  
+5. [Skybox] (https://github.com/MasDennis/Rajawali/wiki/Tutorial-05-Skybox)  
+6. [Screenshots] (https://github.com/MasDennis/Rajawali/wiki/Tutorial-06-Screenshots)  
+7. [Plugins] (https://github.com/MasDennis/Rajawali/wiki/Tutorial-05-Plugins)  
+8. [User Interface Elements] (https://github.com/MasDennis/Rajawali/wiki/Tutorial-08-Adding-User-Interface-Elements)  
+9. [Creating a Custom Material GLSL Shader](https://github.com/MasDennis/Rajawali/wiki/Tutorial-09-Creating-a-Custom-Material---GLSL-Shader)  
+10. [2D Renderer](https://github.com/MasDennis/Rajawali/wiki/Tutorial-10-2D-Renderer)  
+11. [Particles](https://github.com/MasDennis/Rajawali/wiki/Tutorial-11-Particles)  
+12. [Object Picking](https://github.com/MasDennis/Rajawali/wiki/Tutorial-12-Object-Picking)  
+13. [Animation Classes](https://github.com/MasDennis/Rajawali/wiki/Tutorial-13-Animation-Classes)  
+14. [Bump Normal Mapping](https://github.com/MasDennis/Rajawali/wiki/Tutorial-14-Bump-Normal-Mapping)  
+15. [MD2 Animation](https://github.com/MasDennis/Rajawali/wiki/Tutorial-15-MD2-Animation)  
+16. [Collision Detection](https://github.com/MasDennis/Rajawali/wiki/Tutorial-16-Collision-Detection)  
+17. [Importing .Obj Files](https://github.com/MasDennis/Rajawali/wiki/Tutorial-17-Importing-.Obj-Files)  
+18. [Drawing Lines](https://github.com/MasDennis/Rajawali/wiki/Tutorial-18-Drawing-Lines)  
+19. [Catmull Rom Splines](https://github.com/MasDennis/Rajawali/wiki/Tutorial-19-Catmull-Rom-Splines)  
+20. [Animated Sprites](https://github.com/MasDennis/Rajawali/wiki/Tutorial-20-Animated-Sprites)  
+21. [Fog](https://github.com/MasDennis/Rajawali/wiki/Tutorial-21-Fog)  
+22. [More Optimisation](https://github.com/MasDennis/Rajawali/wiki/Tutorial-22-More-Optimisation)  
+23. [Custom Vertex Shader](https://github.com/MasDennis/Rajawali/wiki/Tutorial-23-Custom-Vertex-Shader)  
+24. [Using Geometry Data To Position And Rotate Objects](https://github.com/MasDennis/Rajawali/wiki/Tutorial-24-Using-Geometry-Data-To-Position-And-Rotate-Objects)  
+25. [Video Material](https://github.com/MasDennis/Rajawali/wiki/Tutorial-25-Video-Material)  
+26. [Orthographic Camera](https://github.com/MasDennis/Rajawali/wiki/Tutorial-26-Orthographic-Camera)
+27. [Texture Compression](https://github.com/MasDennis/Rajawali/wiki/Tutorial-27-Texture-Compression)
+28. [Transparent Textures](https://github.com/MasDennis/Rajawali/wiki/Tutorial-28-Transparent-Textures)
+29. [Skeletal Animation](https://github.com/MasDennis/Rajawali/wiki/Tutorial-29-Skeletal-Animation)
+30. [Creating a Day Dream](https://github.com/MasDennis/Rajawali/wiki/Tutorial-30-Creating-a-Day-Dream)
+31. [Using RajawaliScene] (https://github.com/MasDennis/Rajawali/wiki/Tutorial-31-Using-RajawaliScene)
 
-## Tutorials By Others
+## Tutorials & Articles By Others
 * (Kean Walmsley from Autodesk) Creating a 3D viewer for our Apollonian service using Android [Part 1](http://through-the-interface.typepad.com/through_the_interface/2012/04/creating-a-3d-viewer-for-our-apollonian-service-using-android-part-1.html) [Part 2](http://through-the-interface.typepad.com/through_the_interface/2012/05/creating-a-3d-viewer-for-our-apollonian-service-using-android-part-2.html) [Part 3](http://through-the-interface.typepad.com/through_the_interface/2012/05/creating-a-3d-viewer-for-our-apollonian-service-using-android-part-3.html)
-* Rajawali と戯れる [Part 1](http://dev.classmethod.jp/smartphone/android/android-rajawali-tutorials-01/) [Part 2](http://dev.classmethod.jp/smartphone/android/android-rajawali-tutorials-02/)
+* Rajawali と戯れる [Part 1](http://dev.classmethod.jp/smartphone/android/android-rajawali-tutorials-01/) [Part 2](http://dev.classmethod.jp/smartphone/android/android-rajawali-tutorials-02/) (Japanese)
+* [Introducing Plugin Architecture for Rajawali](http://www.andrewjo.com/blog/mobile-development/introducing-plugin-architecture-for-rajawali)
+* [Object Occlusion Testing in Rajawali](http://www.andrewjo.com/blog/mobile-development/object-occlusion-testing-in-rajawali)
+* [Ниже пример как сделать простую 3D модель и запустить сцену на Android](http://konsultantspb.ru/3d-engine-rajawali/)(Russian)
+* [Android in razvoj 3D igre](http://www.monitor.si/clanek/android-in-razvoj-3d-igre/142302/)(Slovenian)
+* [Rajawali là gì?](http://www.trithucmoi.co/en/component/content/article/101-rajawali-va-ardor3d.html)(Vietnamese)
 
 ## Learn Rajawali at a Training Center
 * [Android Game Development in India](http://virtualinfocom.com/android_game/android_game_development_institute.html)
 * [Android Application Programming in India](http://virtualinfocom.com/android_game_application_development_training.html)
 
-## Made with Rajawali
-
-[![A Liquid Cloud Live Wallpaper](http://www.rozengain.com/files/rajawali/a_liquid_cloud_live_wallpaper.png)](https://market.android.com/details?id=com.formisk.aliquidcloud.free)
-[![Cube Complex Live Wallpaper](http://www.rozengain.com/files/rajawali/cube_complex_live_wallpaper.png)](https://play.google.com/store/apps/details?id=com.ToxicBakery.lwp.cubecomplexfree)
-[![Pyro Live Wallpaper](http://www.rozengain.com/files/rajawali/pyro.jpg)](https://play.google.com/store/apps/details?id=com.pyroliveFREE)
-[![Neurons Live Wallpaper](http://i.imgur.com/hGwVH.png)](https://play.google.com/store/apps/details?id=com.jayschwa.android.wallpaper.neurons)
-[![Autumn Grove Live Wallpaper](http://www.rozengain.com/files/rajawali/autumn_grove_live_wallpaper.png)](https://play.google.com/store/apps/details?id=com.PM.AutumnGrove3DFREE)
-[![F5E Tiger Live Wallpaper](http://www.rozengain.com/files/rajawali/f5e_tiger_live_wallpaper.png)](https://market.android.com/details?id=com.monyetmabuk.livewallpapers.f5tiger)
-[![Het Journaal](http://www.rozengain.com/files/rajawali/rajawali-het-journaal.jpg)](https://play.google.com/store/apps/details?id=com.bw.journal)
-[![Beach In Bali 3D](http://www.rozengain.com/files/rajawali/beach_in_bali.png)](https://play.google.com/store/apps/details?id=looksapp.classes)
-[![A Neon Path](http://www.rozengain.com/files/rajawali/neon_path.png)](https://play.google.com/store/apps/details?id=com.formisk.aneonpath.free)
-
-## Current Todo List
-* Texture atlas
-* Bones animation
-* Text planes
-* Octrees
-* Transparent fog
-* Ray picking

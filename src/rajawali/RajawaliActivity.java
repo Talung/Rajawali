@@ -1,10 +1,21 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali;
 
 import javax.microedition.khronos.egl.EGL10;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.egl.EGLDisplay;
 
-import rajawali.animation.TimerManager;
 import rajawali.renderer.RajawaliRenderer;
 import rajawali.util.RajLog;
 import android.app.Activity;
@@ -19,7 +30,14 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 
-@Deprecated
+/**
+ * This is a standard Android SDK based activity which manages 
+ * the Rajawali engine. In general, you may want to consider
+ * using {@link RajawaliFragment} over this class, however if you are
+ * developing for compatibility with API 8-10 (2.2-2.3.3), and want
+ * to use fragments in your app, you will need to use 
+ * {@link RajawaliFragmentActivity} instead.
+ */
 public class RajawaliActivity extends Activity {
 	protected GLSurfaceView mSurfaceView;
 	protected FrameLayout mLayout;
@@ -27,10 +45,17 @@ public class RajawaliActivity extends Activity {
 	protected boolean mUsesCoverageAa;
 	private RajawaliRenderer mRajRenderer;
 	protected boolean checkOpenGLVersion = true;
+	protected boolean mDeferGLSurfaceViewCreation = false;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if(!mDeferGLSurfaceViewCreation)
+        	createSurfaceView();
+    }
+    
+    protected void createSurfaceView()
+    {
         mSurfaceView = new GLSurfaceView(this);
         
         ActivityManager am = (ActivityManager)getSystemService(Context.ACTIVITY_SERVICE);
@@ -40,6 +65,7 @@ public class RajawaliActivity extends Activity {
         		throw new Error("OpenGL ES 2.0 is not supported by this device");
         }
         mSurfaceView.setEGLContextClientVersion(2);
+        
         mLayout = new FrameLayout(this);
         mLayout.addView(mSurfaceView);
         
@@ -154,15 +180,18 @@ public class RajawaliActivity extends Activity {
     @Override
     protected void onResume() {
     	super.onResume();
+    	if(mRajRenderer == null) return;
     	mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
     	mSurfaceView.onResume();
+    	mRajRenderer.onVisibilityChanged(true);
     }
     
     @Override
     protected void onPause() {
     	super.onPause();
-    	TimerManager.getInstance().clear();
+    	if(mRajRenderer == null) return;
     	mSurfaceView.onPause();
+    	mRajRenderer.onVisibilityChanged(false);
     }
 
     @Override
@@ -173,7 +202,7 @@ public class RajawaliActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-    	mRajRenderer.onSurfaceDestroyed();
+        mRajRenderer.onSurfaceDestroyed();
         unbindDrawables(mLayout);
         System.gc();
     }
@@ -188,5 +217,18 @@ public class RajawaliActivity extends Activity {
             }
             ((ViewGroup) view).removeAllViews();
         }
+    }
+    
+    /**
+     * Setting this to true will allow you to create surface view manually.
+     * This could be needed when working with other libraries that need
+     * to share a OpenGL context.
+     * This is set to false by default which will cause the GLSurfaceView to
+     * be created in onCreate()
+     * @param defer
+     */
+    protected void deferGLSurfaceViewCreation(boolean defer)
+    {
+    	mDeferGLSurfaceViewCreation = defer;
     }
 }

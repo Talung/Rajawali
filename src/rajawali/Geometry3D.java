@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali;
 
 import java.nio.Buffer;
@@ -7,12 +19,13 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
+import java.util.Arrays;
 
 import rajawali.animation.mesh.VertexAnimationObject3D;
 import rajawali.bounds.BoundingBox;
 import rajawali.bounds.BoundingSphere;
+import rajawali.math.vector.Vector3;
 import rajawali.renderer.RajawaliRenderer;
-import rajawali.util.BufferUtil;
 import rajawali.util.RajLog;
 import android.graphics.Color;
 import android.opengl.GLES20;
@@ -128,6 +141,15 @@ public class Geometry3D {
 	 * The bounding sphere for this geometry. This is used for collision detection.
 	 */
 	protected BoundingSphere mBoundingSphere;
+	/**
+	 * Indicates whether this geometry contains normals or not.
+	 */
+	protected boolean mHasNormals;
+	/**
+	 * Indicates whether this geometry contains texture coordinates or not.
+	 */
+	protected boolean mHasTextureCoordinates;
+	
 	public enum BufferType {
 		FLOAT_BUFFER,
 		INT_BUFFER,
@@ -141,6 +163,84 @@ public class Geometry3D {
 		mTexCoordBufferInfo = new BufferInfo();
 		mColorBufferInfo = new BufferInfo();
 		mNormalBufferInfo = new BufferInfo();
+	}
+	
+	/**
+	 * Concatenates a list of float arrays into a single array.
+	 * 
+	 * @param arrays The arrays.
+	 * @return The concatenated array.
+	 * 
+	 * @see {@link http://stackoverflow.com/questions/80476/how-to-concatenate-two-arrays-in-java}
+	 */
+	public static float[] concatAllFloat(float[] ... arrays) {
+		int totalLength = 0;
+		final int subArrayCount = arrays.length;
+		for (int i = 0; i < subArrayCount; ++i) {
+			totalLength += arrays[i].length;
+		}
+		float[] result = Arrays.copyOf(arrays[0], totalLength);
+		int offset = arrays[0].length;
+		for (int i = 1; i < subArrayCount; ++i) {
+			System.arraycopy(arrays[i], 0, result, offset, arrays[i].length);
+			offset += arrays[i].length;
+		}
+		return result;
+	}
+	
+	/**
+	 * Concatenates a list of int arrays into a single array.
+	 * 
+	 * @param arrays The arrays.
+	 * @return The concatenated array.
+	 * 
+	 * @see {@link http://stackoverflow.com/questions/80476/how-to-concatenate-two-arrays-in-java}
+	 */
+	public static int[] concatAllInt(int[] ... arrays) {
+		int totalLength = 0;
+		final int subArrayCount = arrays.length;
+		for (int i = 0; i < subArrayCount; ++i) {
+			totalLength += arrays[i].length;
+		}
+		int[] result = Arrays.copyOf(arrays[0], totalLength);
+		int offset = arrays[0].length;
+		for (int i = 1; i < subArrayCount; ++i) {
+			System.arraycopy(arrays[i], 0, result, offset, arrays[i].length);
+			offset += arrays[i].length;
+		}
+		return result;
+	}
+	
+	public static float[] getFloatArrayFromBuffer(FloatBuffer buffer) {
+		float[] array = null;
+		if (buffer.hasArray()) {
+			array = buffer.array();
+		} else {
+			buffer.rewind();
+			array = new float[buffer.capacity()];
+			buffer.get(array);		
+		}
+		return array;
+	}
+	
+	public static int[] getIntArrayFromBuffer(Buffer buffer) {
+		int[] array = null;
+		if (buffer.hasArray()) {
+			array = (int[]) buffer.array();
+		} else {
+			buffer.rewind();
+			array = new int[buffer.capacity()];
+			if (buffer instanceof IntBuffer) {
+				((IntBuffer) buffer).get(array);
+			} else if (buffer instanceof ShortBuffer) {
+				int count = 0;
+				while (buffer.hasRemaining()) {
+					array[count] = (int) (((ShortBuffer) buffer).get());
+					++count;
+				}
+			}
+		}
+		return array;
 	}
 	
 	/**
@@ -159,6 +259,91 @@ public class Geometry3D {
 		if(mColors == null) this.mColorBufferInfo = geom.getColorBufferInfo();
 		this.mNormalBufferInfo = geom.getNormalBufferInfo();
 		this.mOriginalGeometry = geom;
+		this.mHasNormals = geom.hasNormals();
+		this.mHasTextureCoordinates = geom.hasTextureCoordinates();
+	}
+	
+	/**
+	 * Adds the geometry from the incoming geometry with the specified offset.
+	 * Note that the offset is only applied to the vertex positions.
+	 * 
+	 * @param offset {@link Vector3} containing the offset in each direction. Can be null.
+	 * @param geometry {@link Geometry3D} to be added.
+	 */
+	public void addFromGeometry3D(Vector3 offset, Geometry3D geometry) {
+		float[] newVertices = null;
+		float[] newNormals = null;
+		float[] newColors = null;
+		float[] newTextureCoords = null;
+		int[] newIntIndices = null;
+		float[] mVerticesArray = null;
+		float[] mNormalsArray = null;
+		float[] mColorsArray = null;
+		float[] mTextureCoordsArray = null;
+		int[] mIndicesArray = null;
+
+		//Get the old data
+		mVerticesArray = getFloatArrayFromBuffer(mVertices);
+		mNormalsArray = getFloatArrayFromBuffer(mNormals);
+		mColorsArray = getFloatArrayFromBuffer(mColors);
+		mTextureCoordsArray = getFloatArrayFromBuffer(mTextureCoords);
+		if (!mOnlyShortBufferSupported) {
+			mIndicesArray = getIntArrayFromBuffer(mIndicesInt);
+		} else {
+        	mIndicesArray = getIntArrayFromBuffer(mIndicesShort);
+        }
+		
+		//Get the new data, offset the vertices
+		int axis = 0;
+		float[] addVertices = getFloatArrayFromBuffer(geometry.getVertices());
+		if (offset != null) {
+			for (int i = 0, j = addVertices.length; i < j; ++i) {
+				switch (axis) {
+				case 0:
+					addVertices[i] += offset.x;
+					break;
+				case 1:
+					addVertices[i] += offset.y;
+					break;
+				case 2:
+					addVertices[i] += offset.z;
+					break;
+				}
+				++axis;
+				if (axis > 2)
+					axis = 0;
+			}
+		}
+		float[] addNormals = getFloatArrayFromBuffer(geometry.getNormals());
+		float[] addColors = getFloatArrayFromBuffer(geometry.getColors());
+		float[] addTextureCoords = getFloatArrayFromBuffer(geometry.getTextureCoords());
+		int[] addIndices = getIntArrayFromBuffer(geometry.getIndices());
+		int index_offset = (mVerticesArray.length/3);
+		for (int i = 0, j = addIndices.length; i < j; ++i) {
+			addIndices[i] += index_offset;
+		}
+		
+		//Concatenate the old and new data
+		newVertices = concatAllFloat(mVerticesArray, addVertices);
+		newNormals = concatAllFloat(mNormalsArray, addNormals);
+		newColors = concatAllFloat(mColorsArray, addColors);
+		newTextureCoords = concatAllFloat(mTextureCoordsArray, addTextureCoords);
+		newIntIndices = concatAllInt(mIndicesArray, (int[]) addIndices);
+		
+		//Set the new data
+		setVertices(newVertices, true);
+		mNormals = null;
+		setNormals(newNormals);
+		mTextureCoords = null;
+		setTextureCoords(newTextureCoords);
+		mColors = null;
+		setColors(newColors);
+		mIndicesInt = null;
+		mIndicesShort = null;
+		setIndices(newIntIndices);
+
+		//Create the new buffers
+		createBuffers();
 	}
 	
 	/**
@@ -257,15 +442,14 @@ public class Geometry3D {
 		mColorBufferInfo.usage = colorsUsage;
 		mIndexBufferInfo.usage = indicesUsage;
 		setVertices(vertices);
-		setNormals(normals);
+		if(normals != null)
+			setNormals(normals);
 		if(textureCoords == null || textureCoords.length == 0)
 			textureCoords = new float[(vertices.length / 3) * 2];
 		
 		setTextureCoords(textureCoords);
-		if(colors == null || colors.length == 0)
-			setColors(0xff000000 + (int)(Math.random() * 0xffffff));
-		else
-			setColors(colors);	
+		if(colors != null && colors.length > 0)
+			setColors(colors);
 		setIndices(indices);
 
 		createBuffers();
@@ -401,6 +585,7 @@ public class Geometry3D {
 		if(type == BufferType.SHORT_BUFFER)
 			byteSize = SHORT_SIZE_BYTES;
 		
+		buffer.rewind();
 		GLES20.glBindBuffer(target, handle);
 		GLES20.glBufferData(target, buffer.limit() * byteSize, buffer, usage);
 		GLES20.glBindBuffer(target, 0);
@@ -432,9 +617,17 @@ public class Geometry3D {
 	}
 	
 	/**
-	 * Specifies the expected usage pattern of the data store. The symbolic constant must be GLES20.GL_STREAM_DRAW, GLES20.GL_STREAM_READ, GLES20.GL_STREAM_COPY, GLES20.GL_STATIC_DRAW, GLES20.GL_STATIC_READ, GLES20.GL_STATIC_COPY, GLES20.GL_DYNAMIC_DRAW, GLES20.GL_DYNAMIC_READ, or GLES20.GL_DYNAMIC_COPY.
+	 * Specifies the expected usage pattern of the data store. The symbolic constant must be 
+	 * GLES20.GL_STREAM_DRAW, GLES20.GL_STREAM_READ, GLES20.GL_STREAM_COPY, GLES20.GL_STATIC_DRAW, 
+	 * GLES20.GL_STATIC_READ, GLES20.GL_STATIC_COPY, GLES20.GL_DYNAMIC_DRAW, GLES20.GL_DYNAMIC_READ, 
+	 * or GLES20.GL_DYNAMIC_COPY.
 	 * 
-	 * usage is a hint to the GL implementation as to how a buffer object's data store will be accessed. This enables the GL implementation to make more intelligent decisions that may significantly impact buffer object performance. It does not, however, constrain the actual usage of the data store. usage can be broken down into two parts: first, the frequency of access (modification and usage), and second, the nature of that access. The frequency of access may be one of these:
+	 * Usage is a hint to the GL implementation as to how a buffer object's data store will be 
+	 * accessed. This enables the GL implementation to make more intelligent decisions that may 
+	 * significantly impact buffer object performance. It does not, however, constrain the actual 
+	 * usage of the data store. usage can be broken down into two parts: first, the frequency of 
+	 * access (modification and usage), and second, the nature of that access. The frequency of 
+	 * access may be one of these:
 	 * <p>
 	 * STREAM
 	 * The data store contents will be modified once and used at most a few times.
@@ -503,11 +696,11 @@ public class Geometry3D {
 					.allocateDirect(vertices.length * FLOAT_SIZE_BYTES)
 					.order(ByteOrder.nativeOrder()).asFloatBuffer();
 			
-			BufferUtil.copy(vertices, mVertices, vertices.length, 0);
+			mVertices.put(vertices);
 			mVertices.position(0);
 			mNumVertices = vertices.length / 3;
 		} else {
-			BufferUtil.copy(vertices, mVertices, vertices.length, 0);
+			mVertices.put(vertices);
 		}
 	}
 	
@@ -525,16 +718,19 @@ public class Geometry3D {
 	}
 	
 	public void setNormals(float[] normals) {
+		if(normals == null) return;
 		if(mNormals == null) {
 			mNormals = ByteBuffer.allocateDirect(normals.length * FLOAT_SIZE_BYTES)
 					.order(ByteOrder.nativeOrder()).asFloatBuffer();
-			BufferUtil.copy(normals, mNormals, normals.length, 0);
+			mNormals.put(normals);
 			mNormals.position(0);
 		} else {
 			mNormals.position(0);
-			BufferUtil.copy(normals, mNormals, normals.length, 0);
+			mNormals.put(normals);
 			mNormals.position(0);
 		}
+		
+		mHasNormals = true;
 	}
 	
 	public void setNormals(FloatBuffer normals) {
@@ -549,6 +745,10 @@ public class Geometry3D {
 		if(mOriginalGeometry != null)
 			return mOriginalGeometry.getNormals();
 		return mNormals;
+	}
+	
+	public boolean hasNormals() {
+		return mHasNormals;
 	}
 	
 	public void setIndices(int[] indices) {
@@ -570,21 +770,27 @@ public class Geometry3D {
 	}
 	
 	public void setTextureCoords(float[] textureCoords) {
+		if(textureCoords == null) return;
 		if(mTextureCoords == null) {
 			mTextureCoords = ByteBuffer
 					.allocateDirect(textureCoords.length * FLOAT_SIZE_BYTES)
 					.order(ByteOrder.nativeOrder()).asFloatBuffer();
-			BufferUtil.copy(textureCoords, mTextureCoords, textureCoords.length, 0);
+			mTextureCoords.put(textureCoords);
 			mTextureCoords.position(0);
 		} else {
-			BufferUtil.copy(textureCoords, mTextureCoords, textureCoords.length, 0);
+			mTextureCoords.put(textureCoords);
 		}
+		mHasTextureCoordinates = true;
 	}
 	
 	public FloatBuffer getTextureCoords() {
 		if(mTextureCoords == null && mOriginalGeometry != null)
 			return mOriginalGeometry.getTextureCoords();
 		return mTextureCoords;
+	}
+	
+	public boolean hasTextureCoordinates() {
+		return mHasTextureCoordinates;
 	}
 	
 	public void setColors(int color) {
@@ -596,10 +802,10 @@ public class Geometry3D {
 			mColors = ByteBuffer
 					.allocateDirect(colors.length * FLOAT_SIZE_BYTES)
 					.order(ByteOrder.nativeOrder()).asFloatBuffer();
-			BufferUtil.copy(colors, mColors, colors.length, 0);
+			mColors.put(colors);
 			mColors.position(0);
 		} else {
-			BufferUtil.copy(colors, mColors, colors.length, 0);
+			mColors.put(colors);
 			mColors.position(0);
 		}
 	}

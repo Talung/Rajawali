@@ -1,81 +1,59 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali.animation;
 
-import rajawali.ATransformable3D;
-import rajawali.math.Number3D;
-import rajawali.math.Number3D.Axis;
 import rajawali.math.Quaternion;
+import rajawali.math.vector.Vector3;
+import rajawali.math.vector.Vector3.Axis;
 
 public class RotateAnimation3D extends Animation3D {
-	protected float mDegreesToRotate;
-	protected float mRotateFrom;
-	protected float mRotationAngle;
-	protected Number3D mRotationAxis;
+
+	protected double mRotateX;
+	protected double mRotateY;
+	protected double mRotateZ;
 	protected Quaternion mQuat;
 	protected Quaternion mQuatFrom;
-	protected boolean mCopyCurrentOrientation;
-	
-	public RotateAnimation3D(Axis axis, float degreesToRotate) {
-		this(axis, 0, degreesToRotate);
-		mCopyCurrentOrientation = true;
-	}
-	
-	public RotateAnimation3D(Axis axis, float rotateFrom, float degreesToRotate ) {
-		this(Number3D.getAxisVector(axis), rotateFrom, degreesToRotate);
-	}
-	
-	public RotateAnimation3D(Number3D axis, float degreesToRotate ) {
-		this(axis, 0, degreesToRotate);
-		mCopyCurrentOrientation = true;
-	}
 
-	public RotateAnimation3D(Number3D axis, float rotateFrom, float degreesToRotate ) {
+	public RotateAnimation3D(double xRotate, double yRotate, double zRotate) {
 		super();
-		mQuat = new Quaternion();
+
+		mQuat = Quaternion.getIdentity();
 		mQuatFrom = new Quaternion();
-		mQuatFrom.fromAngleAxis(rotateFrom, axis);
-		mRotationAxis = axis;
-		mRotateFrom = rotateFrom;
-		mDegreesToRotate = degreesToRotate;
-	}
-	
-	@Override
-	public void start() {
-		if(mCopyCurrentOrientation)
-			mQuatFrom.setAllFrom(mTransformable3D.getOrientation());
-		super.start();
-	}
-	
-	@Override
-	public void setTransformable3D(ATransformable3D transformable3D) {
-		super.setTransformable3D(transformable3D);
-		if(mCopyCurrentOrientation)
-			mQuatFrom.setAllFrom(transformable3D.getOrientation());
-	}
-	
-	@Override
-	protected void applyTransformation(float interpolatedTime) {
-		mRotationAngle = mRotateFrom + (interpolatedTime * mDegreesToRotate);
-		//Log.d("Rajawali", angle);
-		mQuat.fromAngleAxis(mRotationAngle, mRotationAxis);
-		mQuat.multiply(mQuatFrom);
-		mTransformable3D.setOrientation(mQuat);
+
+		mRotateX = xRotate;
+		mRotateY = yRotate;
+		mRotateZ = zRotate;
+
+		mQuat.multiply(new Quaternion().fromAngleAxis(Vector3.getAxisVector(Axis.Y), yRotate));
+		mQuat.multiply(new Quaternion().fromAngleAxis(Vector3.getAxisVector(Axis.Z), zRotate));
+		mQuat.multiply(new Quaternion().fromAngleAxis(Vector3.getAxisVector(Axis.X), xRotate));
 	}
 
-	/**
-	 * @deprecated use RotateAnimation3D(axis, degreesToRotate) or RotateAnimation(axis, rotateFrom, degreesToRotate)
-	 * @param toRotate
-	 */
-	@Deprecated
-	public RotateAnimation3D(Number3D toRotate) {
+	public RotateAnimation3D(Vector3 rotate) {
+		this(rotate.x, rotate.y, rotate.z);
 	}
-	
-	/**
-	 * @deprecated use RotateAnimation3D(axis, degreesToRotate) or RotateAnimation(axis, rotateFrom, degreesToRotate) 
-	 * @param fromRotate
-	 * @param toRotate
-	 */
-	@Deprecated
-	public RotateAnimation3D(Number3D fromRotate, Number3D toRotate) {
+
+	@Override
+	public void eventStart() {
+		if (isFirstStart())
+			mTransformable3D.getOrientation(mQuatFrom);
+		
+		super.eventStart();
 	}
+
+	@Override
+	protected void applyTransformation() {
+		mTransformable3D.setOrientation(Quaternion.slerpAndCreate(mQuatFrom, mQuat, mInterpolatedTime));
+	}
+
 }
-

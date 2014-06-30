@@ -1,236 +1,327 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali;
 
-import rajawali.math.AngleAxis;
-import rajawali.math.Number3D;
-import rajawali.math.Number3D.Axis;
+import rajawali.bounds.IBoundingVolume;
+import rajawali.math.Matrix;
+import rajawali.math.Matrix4;
 import rajawali.math.Quaternion;
-import android.opengl.Matrix;
+import rajawali.math.vector.Vector3;
+import rajawali.renderer.AFrameTask;
+import rajawali.scenegraph.IGraphNode;
+import rajawali.scenegraph.IGraphNodeMember;
 
-public abstract class ATransformable3D {
-	protected Number3D mPosition, mRotation, mScale;
+public abstract class ATransformable3D extends AFrameTask implements IGraphNodeMember {
+	protected Vector3 mPosition, mRotation, mScale;
 	protected Quaternion mOrientation;
 	protected Quaternion mTmpOrientation;
-	protected Number3D mRotationAxis;
-	protected Number3D mAxisX, mAxisY, mAxisZ;
+	protected Vector3 mRotationAxis;
 	protected boolean mRotationDirty;
-	protected Number3D mLookAt;
-	protected Number3D mTmpAxis, mTmpVec;
+	protected Vector3 mLookAt;
+	protected Vector3 mTmpAxis, mTmpVec;
 	protected boolean mIsCamera, mQuatWasSet;
-	protected AngleAxis mAngleAxis; 
+	protected Vector3 mTmpRotX = new Vector3();
+	protected Vector3 mTmpRotY = new Vector3();
+	protected Vector3 mTmpRotZ = new Vector3();
+	protected double[] mLookAtMatrix = new double[16];
+	
+	protected IGraphNode mGraphNode;
+	protected boolean mInsideGraph = false; //Default to being outside the graph
 	
 	public ATransformable3D() {
-		mPosition = new Number3D();
-		mRotation = new Number3D();
-		mScale = new Number3D(1, 1, 1);
+		mPosition = new Vector3();
+		mRotation = new Vector3();
+		mScale = new Vector3(1, 1, 1);
 		mOrientation = new Quaternion();
 		mTmpOrientation = new Quaternion();
-		mAxisX = Number3D.getAxisVector(Axis.X);
-		mAxisY = Number3D.getAxisVector(Axis.Y);
-		mAxisZ = Number3D.getAxisVector(Axis.Z);
-		mTmpAxis = new Number3D();
-		mTmpVec = new Number3D();
-		mAngleAxis = new AngleAxis();
+		mTmpAxis = new Vector3();
+		mTmpVec = new Vector3();
 		mRotationDirty = true;
 	}
 	
-	public void setPosition(Number3D position) {
-		mPosition.setAllFrom(position);
+	public void setPosition(Vector3 position) {
+		mPosition.setAll(position);
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public void setPosition(float x, float y, float z) {
+	public void setPosition(double x, double y, double z) {
 		mPosition.setAll(x, y, z);
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public Number3D getPosition() {
+	public Vector3 getPosition() {
 		return mPosition;
 	}
 	
-	public void setX(float x) {
+	public void setX(double x) {
 		mPosition.x = x;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public float getX() {
+	public double getX() {
 		return mPosition.x;
 	}
 
-	public void setY(float y) {
+	public void setY(double y) {
 		mPosition.y = y;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public float getY() {
+	public double getY() {
 		return mPosition.y;
 	}
 
-	public void setZ(float z) {
+	public void setZ(double z) {
 		mPosition.z = z;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public float getZ() {
+	public double getZ() {
 		return mPosition.z;
 	}
 	
-	Number3D mTmpRotX = new Number3D();
-	Number3D mTmpRotY = new Number3D();
-	Number3D mTmpRotZ = new Number3D();
-	float[] mLookAtMatrix = new float[16];
 
 	public void setOrientation() {
 		if(!mRotationDirty && mLookAt == null) return;
 
-		mOrientation.setIdentity();
-		if(mLookAt != null) {
-			mTmpRotZ.setAllFrom(mLookAt);
-			mTmpRotZ.normalize();
-
-			mTmpRotX = Number3D.cross(mAxisY, mTmpRotZ);
-			mTmpRotX.normalize();
-			mTmpRotY = Number3D.cross(mTmpRotZ, mTmpRotX);
-			mTmpRotY.normalize();
+		mOrientation.identity();
+		if(mLookAt != null) {			
+			mTmpRotZ.setAll(mLookAt)
+				.subtract(mPosition)
+				.normalize();
+			
+			if(mTmpRotZ.isZero()) mTmpRotZ.z = 1;
+			
+			mTmpRotX.setAll(Vector3.Y)
+				.cross(mTmpRotZ)
+				.normalize();
+			
+			if(mTmpRotX.isZero()) {
+				mTmpRotZ.x += .0001f;
+				mTmpRotX.cross(mTmpRotZ).normalize();
+			}
+			
+			mTmpRotY.setAll(mTmpRotZ);
+			mTmpRotY.cross(mTmpRotX);
 			
 			Matrix.setIdentityM(mLookAtMatrix, 0);
-			mLookAtMatrix[0] = mTmpRotX.x;
-			mLookAtMatrix[1] = mTmpRotX.y;
-			mLookAtMatrix[2] = mTmpRotX.z;
-			mLookAtMatrix[4] = mTmpRotY.x;
-			mLookAtMatrix[5] = mTmpRotY.y;
-			mLookAtMatrix[6] = mTmpRotY.z;
-			mLookAtMatrix[8] = mTmpRotZ.x;
-			mLookAtMatrix[9] = mTmpRotZ.y;
-			mLookAtMatrix[10] = mTmpRotZ.z;
+			mLookAtMatrix[Matrix4.M00] = mTmpRotX.x;
+			mLookAtMatrix[Matrix4.M10] = mTmpRotX.y;
+			mLookAtMatrix[Matrix4.M20] = mTmpRotX.z;
+			mLookAtMatrix[Matrix4.M01] = mTmpRotY.x;
+			mLookAtMatrix[Matrix4.M11] = mTmpRotY.y;
+			mLookAtMatrix[Matrix4.M21] = mTmpRotY.z;
+			mLookAtMatrix[Matrix4.M02] = mTmpRotZ.x;
+			mLookAtMatrix[Matrix4.M12] = mTmpRotZ.y;
+			mLookAtMatrix[Matrix4.M22] = mTmpRotZ.z;
+			
+			//TODO: This will be fixed by Issue #968
 			mOrientation.fromRotationMatrix(mLookAtMatrix);
 		} else {
-			mOrientation.multiply(mTmpOrientation.fromAngleAxis(mIsCamera ? mRotation.y + 180 : mRotation.y, mAxisY));
-			mOrientation.multiply(mTmpOrientation.fromAngleAxis(mIsCamera ? mRotation.z : mRotation.z, mAxisZ));
-			mOrientation.multiply(mTmpOrientation.fromAngleAxis(mIsCamera ? -mRotation.x : mRotation.x, mAxisX));
+			mOrientation.multiply(mTmpOrientation.fromAngleAxis(Vector3.Y, mRotation.y));
+			mOrientation.multiply(mTmpOrientation.fromAngleAxis(Vector3.Z, mRotation.z));
+			mOrientation.multiply(mTmpOrientation.fromAngleAxis(Vector3.X, mRotation.x));
 			if(mIsCamera)
-				mOrientation.inverseSelf();
+				mOrientation.inverse();
 		}
+		//if (mGraphNode != null) mGraphNode.updateObject(this); //TODO: This may cause problems
 	}
 
-	public void rotateAround(Number3D axis, float angle) {
+	public void rotateAround(Vector3 axis, double angle) {
 		rotateAround(axis, angle, true);
 	}
 	
- 	public void rotateAround(Number3D axis, float angle, boolean append) {
+ 	public void rotateAround(Vector3 axis, double angle, boolean append) {
  		if(append) {
- 			mTmpOrientation.fromAngleAxis(angle, axis);
+ 			mTmpOrientation.fromAngleAxis(axis, angle);
  			mOrientation.multiply(mTmpOrientation);
  		} else {
- 			mOrientation.fromAngleAxis(angle, axis);
+ 			mOrientation.fromAngleAxis(axis, angle);
  		}
 		mRotationDirty = false;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 	
-	public Quaternion getOrientation() {
+	public Quaternion getOrientation(Quaternion qt) {
 		setOrientation(); // Force mOrientation to be recalculated
-		return new Quaternion(mOrientation);
+		qt.setAll(mOrientation); 
+		return  qt;
 	}
 	
 	public void setOrientation(Quaternion quat) {
-		mOrientation.setAllFrom(quat);
+		mOrientation.setAll(quat);
 		mRotationDirty = false;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 	
-	public void setRotation(float rotX, float rotY, float rotZ) {
+	public void setRotation(double rotX, double rotY, double rotZ) {
 		mRotation.x = rotX;
 		mRotation.y = rotY;
 		mRotation.z = rotZ;
 		mRotationDirty = true;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 	
-	public void setRotX(float rotX) {
+	public void setRotation(double[] rotationMatrix)
+	{
+		//TODO: This will be fixed by issue #968
+		mOrientation.fromRotationMatrix(rotationMatrix);
+	}
+	
+	public void setRotX(double rotX) {
 		mRotation.x = rotX;
 		mRotationDirty = true;
 	}
 
-	public float getRotX() {
+	public double getRotX() {
 		return mRotation.x;
 	}
 
-	public void setRotY(float rotY) {
+	public void setRotY(double rotY) {
 		mRotation.y = rotY;
 		mRotationDirty = true;
 	}
 
-	public float getRotY() {
+	public double getRotY() {
 		return mRotation.y;
 	}
 
-	public void setRotZ(float rotZ) {
+	public void setRotZ(double rotZ) {
 		mRotation.z = rotZ;
 		mRotationDirty = true;
 	}
 
-	public float getRotZ() {
+	public double getRotZ() {
 		return mRotation.z;
 	}
 	
-	public Number3D getRotation() {
+	public Vector3 getRotation() {
 		return mRotation;
 	}
 
-	public void setRotation(Number3D rotation) {
-		mRotation.setAllFrom(rotation);
+	public void setRotation(Vector3 rotation) {
+		mRotation.setAll(rotation);
 		mRotationDirty = true;
 	}
 
-	public void setScale(float scale) {
+	public void setScale(double scale) {
 		mScale.x = scale;
 		mScale.y = scale;
 		mScale.z = scale;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public void setScale(float scaleX, float scaleY, float scaleZ) {
+	public void setScale(double scaleX, double scaleY, double scaleZ) {
 		mScale.x = scaleX;
 		mScale.y = scaleY;
 		mScale.z = scaleZ;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public void setScaleX(float scaleX) {
+	public void setScaleX(double scaleX) {
 		mScale.x = scaleX;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public float getScaleX() {
+	public double getScaleX() {
 		return mScale.x;
 	}
 
-	public void setScaleY(float scaleY) {
+	public void setScaleY(double scaleY) {
 		mScale.y = scaleY;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public float getScaleY() {
+	public double getScaleY() {
 		return mScale.y;
 	}
 
-	public void setScaleZ(float scaleZ) {
+	public void setScaleZ(double scaleZ) {
 		mScale.z = scaleZ;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public float getScaleZ() {
+	public double getScaleZ() {
 		return mScale.z;
 	}
 	
-	public Number3D getScale() {
+	public Vector3 getScale() {
 		return mScale;
 	}
 
-	public void setScale(Number3D scale) {
+	public void setScale(Vector3 scale) {
 		mScale = scale;
+		if (mGraphNode != null) mGraphNode.updateObject(this);
 	}
 
-	public void setLookAt(float x, float y, float z) {
-		if(mLookAt == null) mLookAt = new Number3D();
-		mLookAt.x = -x;
+	public Vector3 getLookAt() {
+		return mLookAt;
+	}
+	
+	public void setLookAt(double x, double y, double z) {
+		if (mLookAt == null) mLookAt = new Vector3();
+		mLookAt.x = x;
 		mLookAt.y = y;
 		mLookAt.z = z;
 		mRotationDirty = true;
 	}
 	
-	public void setLookAt(Number3D lookAt) {
-		if(lookAt == null) {
+	public void setLookAt(Vector3 lookAt) {
+		if (lookAt == null) {
 			mLookAt = null;
 			return;
 		}
 		setLookAt(lookAt.x,  lookAt.y, lookAt.z);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see rajawali.scenegraph.IGraphNodeMember#setGraphNode(rajawali.scenegraph.IGraphNode)
+	 */
+	public void setGraphNode(IGraphNode node, boolean inside) {
+		mGraphNode = node;
+		mInsideGraph = inside;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see rajawali.scenegraph.IGraphNodeMember#getGraphNode()
+	 */
+	public IGraphNode getGraphNode() {
+		return mGraphNode;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see rajawali.scenegraph.IGraphNodeMember#isInGraph()
+	 */
+	public boolean isInGraph() {
+		return mInsideGraph;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see rajawali.scenegraph.IGraphNodeMember#getTransformedBoundingVolume()
+	 */
+	public IBoundingVolume getTransformedBoundingVolume() {
+		return null;
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see rajawali.scenegraph.IGraphNodeMember#getScenePosition()
+	 */
+	public Vector3 getScenePosition() {
+		return mPosition;
 	}
 }

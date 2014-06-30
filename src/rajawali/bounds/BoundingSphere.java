@@ -1,31 +1,43 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali.bounds;
 
 import java.nio.FloatBuffer;
 
-import rajawali.BaseObject3D;
 import rajawali.Camera;
 import rajawali.Geometry3D;
-import rajawali.materials.SimpleMaterial;
-import rajawali.math.Number3D;
+import rajawali.Object3D;
+import rajawali.materials.Material;
+import rajawali.math.Matrix4;
+import rajawali.math.vector.Vector3;
 import rajawali.primitives.Sphere;
 import android.opengl.GLES20;
-import android.opengl.Matrix;
 
 public class BoundingSphere implements IBoundingVolume {
 	protected Geometry3D mGeometry;
-	protected float mRadius;
-	protected Number3D mPosition;
+	protected double mRadius;
+	protected final Vector3 mPosition;
 	protected Sphere mVisualSphere;
-	protected float[] mTmpMatrix = new float[16];
-	protected Number3D mTmpPos;
-	protected float mDist, mMinDist, mScale;
-	protected float[] mScaleValues;
+	protected final Matrix4 mTmpMatrix = new Matrix4(); //Assumed to never leave identity state
+	protected final Vector3 mTmpPos;
+	protected double mDist, mMinDist, mScale;
+	protected final double[] mScaleValues;
+	protected int mBoundingColor = 0xffffff00;
 	
 	public BoundingSphere() {
-		super();
-		mPosition = new Number3D();
-		mTmpPos = new Number3D();
-		mScaleValues = new float[3];
+		mPosition = new Vector3();
+		mTmpPos = new Vector3();
+		mScaleValues = new double[3];
 	}
 	
 	public BoundingSphere(Geometry3D geometry) {
@@ -34,44 +46,45 @@ public class BoundingSphere implements IBoundingVolume {
 		calculateBounds(mGeometry);
 	}
 	
-	public BaseObject3D getVisual() {
+	public Object3D getVisual() {
 		return mVisualSphere;
 	}
 	
-	public void drawBoundingVolume(Camera camera, float[] projMatrix, float[] vMatrix, float[] mMatrix) {
-		if(mVisualSphere == null) {
-			mVisualSphere = new Sphere(1, 8, 8);
-			mVisualSphere.setMaterial(new SimpleMaterial());
-			mVisualSphere.getMaterial().setUseColor(true);
-			mVisualSphere.setColor(0xffffff00);
-			mVisualSphere.setDrawingMode(GLES20.GL_LINE_LOOP);
-		}
-
-		Matrix.setIdentityM(mTmpMatrix, 0);
-		mVisualSphere.setPosition(mPosition);
-		mVisualSphere.setScale(mRadius * mScale);
-		mVisualSphere.render(camera, projMatrix, vMatrix, mTmpMatrix, null);
+	public void setBoundingColor(int color) {
+		mBoundingColor = color;
 	}
 	
-	public void transform(float[] matrix) {
+	public int getBoundingColor() {
+		return mBoundingColor;
+	}
+	
+	public void drawBoundingVolume(Camera camera, final Matrix4 vpMatrix, final Matrix4 projMatrix,
+			final Matrix4 vMatrix, final Matrix4 mMatrix) {
+		if(mVisualSphere == null) {
+			mVisualSphere = new Sphere(1, 8, 8);
+			Material material = new Material();
+			mVisualSphere.setMaterial(material);
+			mVisualSphere.setColor(0xffffff00);
+			mVisualSphere.setDrawingMode(GLES20.GL_LINE_LOOP);
+			mVisualSphere.setDoubleSided(true);
+		}
+
+		mVisualSphere.setPosition(mPosition);
+		mVisualSphere.setScale(mRadius * mScale);
+		mVisualSphere.render(camera, vpMatrix, projMatrix, vMatrix, mTmpMatrix, null);
+	}
+	
+	public void transform(Matrix4 matrix) {
 		mPosition.setAll(0, 0, 0);
 		mPosition.multiply(matrix);
-		mPosition.x = -mPosition.x;
-		
-		mTmpPos.setAll(matrix[0], matrix[1], matrix[2]);
-		mScaleValues[0] = mTmpPos.length();
-		mTmpPos.setAll(matrix[4], matrix[5], matrix[6]);
-		mScaleValues[1] = mTmpPos.length();
-		mTmpPos.setAll(matrix[8], matrix[9], matrix[10]);
-		mScaleValues[2] = mTmpPos.length();
-		
-		mScale = mScaleValues[0] > mScaleValues[1] ? mScaleValues[0] : mScaleValues[1];
-		mScale = mScale > mScaleValues[2] ? mScale : mScaleValues[2];
+		matrix.getScaling(mTmpPos);
+		mScale = mTmpPos.x > mTmpPos.y ? mTmpPos.x : mTmpPos.y;
+		mScale = mScale > mTmpPos.z ? mScale : mTmpPos.z;
 	}
 	
 	public void calculateBounds(Geometry3D geometry) {
-		float radius = 0, maxRadius = 0;
-		Number3D vertex = new Number3D();
+		double radius = 0, maxRadius = 0;
+		Vector3 vertex = new Vector3();
 		FloatBuffer vertices = geometry.getVertices();
 		vertices.rewind();		
 		
@@ -86,23 +99,32 @@ public class BoundingSphere implements IBoundingVolume {
 		mRadius = maxRadius;
 	}
 	
-	public float getRadius() {
+	public double getRadius() {
 		return mRadius;
 	}
 	
-	public Number3D getPosition() {
+	public double getScaledRadius() {
+		return (mRadius*mScale);
+	}
+	
+	public Vector3 getPosition() {
 		return mPosition;
 	}
 	
-	public float getScale() {
+	public double getScale() {
 		return mScale;
+	}
+	
+	@Override
+	public String toString() {
+		return "BoundingSphere radius: " + Double.toString(getScaledRadius());
 	}
 	
 	public boolean intersectsWith(IBoundingVolume boundingVolume) {
 		if(!(boundingVolume instanceof BoundingSphere)) return false;
 		BoundingSphere boundingSphere = (BoundingSphere)boundingVolume;
 		
-		mTmpPos.setAllFrom(mPosition);
+		mTmpPos.setAll(mPosition);
 		mTmpPos.subtract(boundingSphere.getPosition());
 		
 		mDist = mTmpPos.x * mTmpPos.x + mTmpPos.y * mTmpPos.y + mTmpPos.z * mTmpPos.z;
@@ -110,4 +132,14 @@ public class BoundingSphere implements IBoundingVolume {
 		
 		return mDist < mMinDist * mMinDist;
 	}
+
+	/*public boolean contains(IBoundingVolume boundingVolume) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	public boolean isContainedBy(IBoundingVolume boundingVolume) {
+		// TODO Auto-generated method stub
+		return false;
+	}*/
 }

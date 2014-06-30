@@ -1,104 +1,58 @@
+/**
+ * Copyright 2013 Dennis Ippel
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
 package rajawali.animation;
 
-import android.view.animation.Interpolator;
-import rajawali.ATransformable3D;
-import rajawali.BaseObject3D;
-import rajawali.math.Number3D;
+import rajawali.math.vector.Vector3;
 
 public class TranslateAnimation3D extends Animation3D {
-	protected Number3D mToPosition;
-	protected Number3D mFromPosition;
-	protected Number3D mDiffPosition;
-	protected Number3D mMultipliedPosition = new Number3D();
-	protected Number3D mAddedPosition = new Number3D();
-	protected boolean mOrientToPath = false;
-	protected ISpline mSplinePath;
 
-	public TranslateAnimation3D(Number3D toPosition) {
+	protected final Vector3 mMultipliedPosition;
+	protected final Vector3 mAddedPosition;
+	protected final Vector3 mFromPosition;
+
+	protected Vector3 mToPosition;
+	protected Vector3 mDiffPosition;
+
+	public TranslateAnimation3D(Vector3 toPosition) {
 		super();
-		mToPosition = toPosition;
+		mFromPosition = new Vector3();
+		mMultipliedPosition = new Vector3();
+		mAddedPosition = new Vector3();
+		mToPosition = new Vector3(toPosition);
 	}
 
-	public TranslateAnimation3D(Number3D fromPosition, Number3D toPosition) {
-		super();
-		mFromPosition = fromPosition;
-		mToPosition = toPosition;
-	}
-
-	public TranslateAnimation3D(ISpline splinePath) {
-		super();
-		mSplinePath = splinePath;
-	}
-
-	public TranslateAnimation3D(BaseObject3D object, Number3D toPosition, long duration, long start, long length, int repeatCount, int repeatMode, Interpolator interpolator) {
+	public TranslateAnimation3D(Vector3 fromPosition, Vector3 toPosition) {
 		this(toPosition);
 
-		setTransformable3D(object);
-		setDuration(duration);
-		setStart(start);
-		setLength(length);
-		setRepeatCount(repeatCount);
-		setRepeatMode(repeatMode);
-		setInterpolator(interpolator);
-	}
-
-	public TranslateAnimation3D(BaseObject3D object, Number3D fromPosition, Number3D toPosition, long duration, long start, long length, int repeatCount, int repeatMode, Interpolator interpolator) {
-		this(fromPosition, toPosition);
-
-		setTransformable3D(object);
-		setDuration(duration);
-		setStart(start);
-		setLength(length);
-		setRepeatCount(repeatCount);
-		setRepeatMode(repeatMode);
-		setInterpolator(interpolator);
-	}
-
-	public TranslateAnimation3D(BaseObject3D object, ISpline splinePath, long duration, long start, long length, int repeatCount, int repeatMode, Interpolator interpolator) {
-		this(splinePath);
-
-		setTransformable3D(object);
-		setDuration(duration);
-		setStart(start);
-		setLength(length);
-		setRepeatCount(repeatCount);
-		setRepeatMode(repeatMode);
-		setInterpolator(interpolator);
-	}
-	
-	@Override
-	public void setTransformable3D(ATransformable3D transformable3D) {
-		super.setTransformable3D(transformable3D);
-		if (mFromPosition == null)
-			mFromPosition = new Number3D(transformable3D.getPosition());
+		mFromPosition.setAll(fromPosition);
 	}
 
 	@Override
-	protected void applyTransformation(float interpolatedTime) {
-		if (mSplinePath == null) {
-			if (mDiffPosition == null)
-				mDiffPosition = Number3D.subtract(mToPosition, mFromPosition);
-			mMultipliedPosition.setAllFrom(mDiffPosition);
-			mMultipliedPosition.multiply(interpolatedTime);
-			mAddedPosition.setAllFrom(mFromPosition);
-			mAddedPosition.add(mMultipliedPosition);
-			mTransformable3D.getPosition().setAllFrom(mAddedPosition);
-		} else {
-			Number3D pathPoint = mSplinePath.calculatePoint(interpolatedTime);
-			mTransformable3D.getPosition().setAllFrom(pathPoint);
+	protected void eventStart() {
+		if (isFirstStart())
+			mFromPosition.setAll(mTransformable3D.getPosition());
 
-			if (mOrientToPath) {
-				mTransformable3D.setLookAt(mSplinePath.getCurrentTangent());
-			}
-		}
+		super.eventStart();
 	}
 
-	public boolean getOrientToPath() {
-		return mOrientToPath;
+	@Override
+	protected void applyTransformation() {
+		if (mDiffPosition == null)
+			mDiffPosition = Vector3.subtractAndCreate(mToPosition, mFromPosition);
+
+		mMultipliedPosition.scaleAndSet(mDiffPosition, mInterpolatedTime);
+		mAddedPosition.addAndSet(mFromPosition, mMultipliedPosition);
+		mTransformable3D.setPosition(mAddedPosition);
 	}
 
-	public void setOrientToPath(boolean orientToPath) {
-		this.mOrientToPath = orientToPath;
-		mSplinePath.setCalculateTangents(orientToPath);
-	}
 }

@@ -1,6 +1,6 @@
 package rajawali.parser;
 
-
 public interface IParser {
-	public IParser parse();
+
+	public IParser parse() throws ParsingException;
 }
